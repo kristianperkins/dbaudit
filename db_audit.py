@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 import sqlalchemy as sa
 from ipydb import engine
 
-parser = ArgumentParser(description="some things, none of ur business")
+parser = ArgumentParser(description="add auditing to db schema")
 parser.add_argument("-p", "--prefix",
     help="Prefix for created triggers, default is audit_",
     dest="prefix")
