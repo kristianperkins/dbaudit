@@ -11,7 +11,7 @@ Install Dependencies
 1. install oracle instant client (cx_Oracle)
 2. install requirements:
 
-    pip install -r requirements.txt
+        pip install -r requirements.txt
 
 Configuration
 -------------
