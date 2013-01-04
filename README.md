@@ -19,18 +19,17 @@ Configuration
 db-audit uses the [ipydb](https://github.com/jaysw/ipydb) database configuration.  See ipydb on
 how to setup your `~/.db-connections` ini file.
 
-===audit_config table===
+###audit_config table###
 
 Audit records will appear based on the configuration in the `audit_config` table.  The output of
 [sys_context](http://docs.oracle.com/cd/B19306_01/server.102/b14200/functions165.htm) will have to
 match a row in the `audit_config` table, for example the following will audit all data modified by
-connections from test.com:
+connections from 127.0.0.1:
 
-    context_param_name    context_param_value    description
-    ------------------    -------------------    -----------
-    HOST                  test.com               all ip address can haz audit logs
-
-
+    +--------------------+---------------------+---------------------------------------+
+    | context_param_name | context_param_value | description                           |
+    +--------------------+---------------------+---------------------------------------+
+    | IP_ADDRESS         | 127.0.0.1           | Enable audit logging for ip 127.0.0.1 |
 
 Usage
 -----
