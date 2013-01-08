@@ -2,8 +2,6 @@ db-audit
 ========
 
 Generate audit triggers on Oracle database which logs changes to the `audit_log` table.
-db-audit will generate triggers for 
-
 
 Install Dependencies
 --------------------
@@ -43,7 +41,7 @@ This includes triggers names `audit_trig_...` as well as `audit_log`, `audit_con
 
 and to remove the triggers:
 
-    ./db-audit.py test1 -r
+    ./db-audit.py -r test1
 
 Acknowledgements
 ----------------
