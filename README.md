@@ -14,8 +14,8 @@ Install Dependencies
 Configuration
 -------------
 
-db-audit uses the [ipydb](https://github.com/jaysw/ipydb) database configuration.  See ipydb on
-how to setup your `~/.db-connections` ini file.
+db-audit uses the [ipydb](https://github.com/jaysw/ipydb) database configuration.  See the ipydb
+ [`~/.db-connections` file setup documentation](https://github.com/jaysw/ipydb#2-using-connect-and-a-db-connections-configuration-file)
 
 ###audit_config table###
 
