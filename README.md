@@ -43,6 +43,19 @@ and to remove the triggers:
 
     ./db-audit.py -r test1
 
+TODO
+----
+
+1. Add support for sql dialects other than pl-sql
+    * MySQL
+    * postgresql
+    * tsql
+    * others...
+2. View/update audit_config from CLI
+3. view recent audit_log summary/stats from CLI
+4. More CLI options e.g. Specify trigger name prefix
+
+
 Acknowledgements
 ----------------
 
