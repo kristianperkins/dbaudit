@@ -39,7 +39,7 @@ create table audit_log (
   server_host varchar(255) null,
   host varchar(255) null,
   ip_address varchar(255) null,
-  created_dts timestamp(3) not null
+  created_date timestamp(3) not null
 )
 """
 
@@ -48,12 +48,12 @@ audit_log_seq = "create sequence audit_log_seq start with 1 increment by 1 minva
 audit_log_statement_seq = "create sequence audit_log_statement_seq start with 1 increment by 1 minvalue 1"
 
 audit_log_trigger = """
-create or replace trigger audit_log_cdts_i_trg
+create or replace trigger audit_log_created_date_trig
     before insert on audit_log
     referencing new as new old as old
     for each row
     begin
-        :new.created_dts := systimestamp;
+        :new.created_date := systimestamp;
         select audit_log_seq.nextval into :new.id from dual;
     end;
 """
@@ -94,7 +94,6 @@ audit_delete_sql = """
 trigger_name_prefix = "audit_"
 
 def gen_audit_triggers(eng, **kwargs):
-    print kwargs
     ignore_table_prefixes = ['audit_']
     if 'ignore_file' in kwargs:
         ignore_table_prefixes += open(kwargs['ignore_file']).read().splitlines()
