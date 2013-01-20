@@ -51,10 +51,9 @@ TODO
     * postgresql
     * tsql
     * others...
-2. View/update audit_config from CLI
-3. view recent audit_log summary/stats from CLI
+2. View/update `audit_config` from CLI
+3. view recent `audit_log` summary/stats from CLI
 4. More CLI options e.g. Specify trigger name prefix
-
 
 Acknowledgements
 ----------------
