@@ -95,7 +95,7 @@ trigger_name_prefix = "audit_"
 
 def gen_audit_triggers(eng, **kwargs):
     ignore_table_prefixes = ['audit_']
-    if 'ignore_file' in kwargs:
+    if kwargs['ignore_file']:
         ignore_table_prefixes += open(kwargs['ignore_file']).read().splitlines()
     m = sa.MetaData()
     m.reflect(eng)
@@ -104,8 +104,7 @@ def gen_audit_triggers(eng, **kwargs):
     tables = ([t for t in m.sorted_tables if not any(t.name.startswith(pfx) for pfx in ignore_table_prefixes)])
     counter = 0
     with eng.connect() as con:
-        audit_table_count = con.execute("select count(*) from all_tables where table_name = 'AUDIT_LOG'").fetchone()
-        if audit_table_count[0] == 0:
+        if not any([t.name.lower() == 'audit_log' for t in m.sorted_tables]):
             print 'creating audit_log and audit_config tables'
             [con.execute(ddl) for ddl in audit_ddl]
         for table in tables:
