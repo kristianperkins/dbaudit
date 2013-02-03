@@ -8,11 +8,11 @@ Installation
 
 1. install oracle instant client and python driver (cx_Oracle)
 
-    pip install cx_Oracle
+        pip install cx_Oracle
 
 2. install dbaudit using pip:
 
-    pip install git+https://github.com/krockode/dbaudit
+        pip install git+https://github.com/krockode/dbaudit
 
 Configuration
 -------------
