@@ -137,11 +137,14 @@ def remove_audit_triggers(eng):
             print("dropping trigger %s" % t[0])
             con.execute('drop trigger %s' % t[0])
 
-if __name__ == '__main__':
+def main():
     args = parser.parse_args()
     eng = engine.from_config(args.configname)
     if args.rollback:
         remove_audit_triggers(eng)
     else:
         gen_audit_triggers(eng, **dict(vars(args)))
+
+if __name__ == '__main__':
+    main()
 

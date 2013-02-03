@@ -1,2 +1,0 @@
-argparse
-git+https://github.com/jaysw/ipydb.git

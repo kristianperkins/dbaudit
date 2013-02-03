@@ -1,20 +1,23 @@
-db-audit
+dbaudit
 ========
 
 Generate audit triggers on Oracle database which logs changes to the `audit_log` table.
 
-Install Dependencies
---------------------
+Installation
+------------
 
-1. install oracle instant client (cx_Oracle)
-2. install requirements:
+1. install oracle instant client and python driver (cx_Oracle)
 
-        pip install -r requirements.txt
+    pip install cx_Oracle
+
+2. install dbaudit using pip:
+
+    pip install git+https://github.com/krockode/dbaudit
 
 Configuration
 -------------
 
-db-audit uses the [ipydb](https://github.com/jaysw/ipydb) database configuration.  See the ipydb
+dbaudit uses the [ipydb](https://github.com/jaysw/ipydb) database configuration.  See the ipydb
  [`~/.db-connections` file setup documentation](https://github.com/jaysw/ipydb#2-using-connect-and-a-db-connections-configuration-file)
 
 ###audit_config table###
@@ -34,14 +37,14 @@ Usage
 
 To create audit DDL for the database test1 run:
 
-    ./db-audit.py test1
+    dbaudit test1
 
 This includes triggers names `audit_trig_...` as well as `audit_log`, `audit_config` tables and the
 `audit_log_seq` sequence.
 
 and to remove the triggers:
 
-    ./db-audit.py -r test1
+    dbaudit -r test1
 
 TODO
 ----
