@@ -14,8 +14,6 @@ setup (
     author_email='krockode@gmail.com',
     url='http://github.com/krockode/dbaudit',
     packages=['dbaudit'],
-    package_dir={'dbaudit': 'dbaudit'},
-    include_package_data=True,
     zip_safe=False,
     install_requires=requires,
     dependency_links=dep_links,
