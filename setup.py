@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 from setuptools import setup
 
-requires = ['argparse', 'SQLAlchemy', 'ipydb']
-dep_links = ['https://github.com/jaysw/ipydb/tarball/master#egg=ipydb-dev']
+requires = ['SQLAlchemy', 'ipydb']
 description = 'quickly add auditing to your database'
 
 setup (
@@ -16,7 +15,6 @@ setup (
     packages=['dbaudit'],
     zip_safe=False,
     install_requires=requires,
-    dependency_links=dep_links,
     entry_points={
         'console_scripts': [
             'dbaudit = dbaudit.dbaudit:main',
