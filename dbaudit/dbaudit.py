@@ -93,10 +93,10 @@ audit_delete_sql = """
 
 trigger_name_prefix = "audit_"
 
-def gen_audit_triggers(eng, **kwargs):
+def gen_audit_triggers(eng, ignore_file):
     ignore_table_prefixes = ['audit_']
-    if kwargs['ignore_file']:
-        ignore_table_prefixes += open(kwargs['ignore_file']).read().splitlines()
+    if ignore_file:
+        ignore_table_prefixes += open(ignore_file).read().splitlines()
     m = sa.MetaData()
     m.reflect(eng)
     print "-- finished reflecting"
@@ -138,13 +138,13 @@ def remove_audit_triggers(eng):
             con.execute('drop trigger %s' % t[0])
 
 def main():
-    args = parser.parse_args()
     eng = engine.from_config(args.configname)
     if args.rollback:
         remove_audit_triggers(eng)
     else:
-        gen_audit_triggers(eng, **dict(vars(args)))
+        gen_audit_triggers(eng, args.ignore_file)
 
 if __name__ == '__main__':
+    args = parser.parse_args()
     main()
 
