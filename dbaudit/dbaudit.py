@@ -1,7 +1,8 @@
 #!/usr/bin/env python
+from __future__ import print_function
 from argparse import ArgumentParser
 import sqlalchemy as sa
-from ipydb import engine
+from . import engine
 
 parser = ArgumentParser(description="add auditing to db schema")
 parser.add_argument("-p", "--prefix",
@@ -99,17 +100,17 @@ def gen_audit_triggers(eng, ignore_file):
         ignore_table_prefixes += open(ignore_file).read().splitlines()
     m = sa.MetaData()
     m.reflect(eng)
-    print "-- finished reflecting"
+    print("-- finished reflecting")
     ignore_sql_types = [sa.types.BLOB, sa.types.CLOB]
     tables = ([t for t in m.sorted_tables if not any(t.name.startswith(pfx) for pfx in ignore_table_prefixes)])
     counter = 0
     with eng.connect() as con:
         if not any([t.name.lower() == 'audit_log' for t in m.sorted_tables]):
-            print 'creating audit_log and audit_config tables'
+            print('creating audit_log and audit_config tables')
             [con.execute(ddl) for ddl in audit_ddl]
         for table in tables:
             if table.schema:
-                print '-- ignoring table %s from schema %s' % (table.name, table.schema)
+                print('-- ignoring table %s from schema %s' % (table.name, table.schema))
                 continue
             counter += 1
             keys = list(table.primary_key.columns)
@@ -128,16 +129,21 @@ def gen_audit_triggers(eng, ignore_file):
                 print("creating trigger for table %s" % table.name)
                 con.execute(trig_sql)
             else:
-                print '-- skipping table with no primary keys: %s' % table.name
+                print('-- skipping table with no primary keys: %s' % table.name)
+
 
 def remove_audit_triggers(eng):
     with eng.connect() as con:
         triggers = con.execute("select trigger_name from all_triggers where trigger_name like 'AUDIT_TRIG_%'")
-        for t in list(triggers):
+        trig_list = list(triggers)
+        print('triggers', trig_list, 'size', len(trig_list))
+        for t in trig_list:
             print("dropping trigger %s" % t[0])
             con.execute('drop trigger %s' % t[0])
 
+
 def main():
+    args = parser.parse_args()
     eng = engine.from_config(args.configname)
     if args.rollback:
         remove_audit_triggers(eng)
@@ -145,6 +151,5 @@ def main():
         gen_audit_triggers(eng, args.ignore_file)
 
 if __name__ == '__main__':
-    args = parser.parse_args()
     main()
 

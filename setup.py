@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from setuptools import setup
 
-requires = ['SQLAlchemy', 'ipydb']
+requires = ['SQLAlchemy']
 description = 'quickly add auditing to your database'
 
 setup (
