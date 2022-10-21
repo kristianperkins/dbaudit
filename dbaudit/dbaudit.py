@@ -1,8 +1,15 @@
 #!/usr/bin/env python
 from __future__ import print_function
 from argparse import ArgumentParser
+
 import sqlalchemy as sa
+from jinja2 import Template
+
 from . import engine
+
+# import logging
+# logging.basicConfig()
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 parser = ArgumentParser(description="add auditing to db schema")
 parser.add_argument("-p", "--prefix",
@@ -16,6 +23,7 @@ parser.add_argument("-r", "--rollback",
     dest="rollback", default=False, action="store_true")
 parser.add_argument("configname")
 
+dry_run = False
 
 audit_config = """
 create table audit_config (
@@ -27,8 +35,8 @@ create table audit_config (
 
 audit_log = """
 create table audit_log (
-  id number(19) not null,
-  statement_id number(19) not null,
+  id bigint identity primary key not null,
+  statement_id int not null,
   table_name varchar(255) not null,
   operation varchar(255) not null,
   primary_key_name varchar(255) not null,
@@ -36,11 +44,11 @@ create table audit_log (
   column_name varchar(255) null,
   old_column_value varchar(255) null,
   new_column_value varchar(255) null,
-  session_user varchar(255) null,
+  session_usr varchar(255) null,
   server_host varchar(255) null,
   host varchar(255) null,
   ip_address varchar(255) null,
-  created_date timestamp(3) not null
+  created_date datetime2 not null
 )
 """
 
@@ -59,38 +67,39 @@ create or replace trigger audit_log_created_date_trig
     end;
 """
 
-audit_ddl = [audit_config, audit_log, audit_log_seq, audit_log_statement_seq, audit_log_trigger]
+audit_ddl = [audit_config, audit_log, audit_log_statement_seq]
 
-audit_prefix_sql = """
-create or replace trigger audit_trig_%s_%03d
-    after insert or update or delete on %s
-    for each row
-    declare
-        c numeric(19);
-        statement numeric(19);
-    begin
-        select count(*) into c from audit_config ac where sys_context('USERENV', ac.context_param_name) like ac.context_param_value;
-        if c > 0 then
-          select audit_log_statement_seq.nextval into statement from dual;
-          if inserting then"""
-audit_insert_sql = """
-            insert into audit_log (statement_id, table_name, operation, primary_key_name, primary_key_value, column_name, new_column_value, session_user, server_host, host, ip_address)
-            values (statement, '%s', 'INSERT', '%s', :new.%s, '%s', cast(:new.%s as varchar2(255)), sys_context('USERENV', 'SESSION_USER'), sys_context('USERENV', 'SERVER_HOST'), sys_context('USERENV', 'HOST'), sys_context('USERENV', 'IP_ADDRESS'));"""
-audit_if_updating = """
-          elsif updating then"""
-audit_update_sql = """
-            if updating('%s') then
-              insert into audit_log (statement_id, table_name, operation, primary_key_name, primary_key_value, column_name, old_column_value, new_column_value, session_user, server_host, host, ip_address)
-              values (statement, '%s', 'UPDATE', '%s', :new.%s, '%s', cast(:old.%s as varchar2(255)), cast(:new.%s as varchar2(255)), sys_context('USERENV', 'SESSION_USER'), sys_context('USERENV', 'SERVER_HOST'), sys_context('USERENV', 'HOST'), sys_context('USERENV', 'IP_ADDRESS'));
-            end if;"""
-audit_delete_sql = """
-          elsif deleting then
-              insert into audit_log (statement_id, table_name, operation, primary_key_name, primary_key_value, session_user, server_host, host, ip_address)
-              values (statement, '%s', 'DELETE', '%s', :old.%s, sys_context('USERENV', 'SESSION_USER'), sys_context('USERENV', 'SERVER_HOST'), sys_context('USERENV', 'HOST'), sys_context('USERENV', 'IP_ADDRESS'));
-          end if;
-        end if;
+audit_trigger_template = Template("""
+create or alter trigger audit_trig_{{ table_name }}
+    on {{ table_name }}
+    after insert, update, delete
+as
+declare @next_statement_id bigint;
+declare @pk_value varchar(255)
+declare @operation_type varchar(7) =
+    case when exists(select * from inserted) and exists(select * from deleted)
+        then 'UPDATE'
+    when exists(select * from inserted)
+        then 'INSERT'
+    else
+        'DELETE'
     end;
-"""
+declare changes_cursor cursor for
+select {{ pk_name }} from inserted
+union
+select {{ pk_name }} from deleted;
+set @next_statement_id = next value for audit_log_statement_seq;
+open changes_cursor;
+fetch next from changes_cursor into @pk_value;
+while @@fetch_status = 0
+begin
+    fetch next from changes_cursor into @pk_value;
+    insert into audit_log (statement_id, table_name, operation, primary_key_name, primary_key_value, column_name, new_column_value, session_usr, server_host, host, ip_address, created_date)
+                values (@next_statement_id, '{{ table_name }}', @operation_type, '{{ pk_name }}', @pk_value, 'column_name', cast('newval' as varchar(255)), session_user, 'SERVER_HOST', 'HOST', 'IP_ADDRESS', getdate());
+    fetch next from changes_cursor into @pk_value;
+end
+close changes_cursor;
+deallocate changes_cursor;""")
 
 trigger_name_prefix = "audit_"
 
@@ -103,11 +112,15 @@ def gen_audit_triggers(eng, ignore_file):
     print("-- finished reflecting")
     ignore_sql_types = [sa.types.BLOB, sa.types.CLOB]
     tables = ([t for t in m.sorted_tables if not any(t.name.startswith(pfx) for pfx in ignore_table_prefixes)])
+    # print(tables, len(tables))
     counter = 0
     with eng.connect() as con:
         if not any([t.name.lower() == 'audit_log' for t in m.sorted_tables]):
             print('creating audit_log and audit_config tables')
-            [con.execute(ddl) for ddl in audit_ddl]
+            if not dry_run:
+                [con.execute(ddl) for ddl in audit_ddl]
+        else:
+            print('-- skipping audit tables ddl, already found')
         for table in tables:
             if table.schema:
                 print('-- ignoring table %s from schema %s' % (table.name, table.schema))
@@ -120,23 +133,19 @@ def gen_audit_triggers(eng, ignore_file):
                 cols = [col for col in table.columns if col.name != pk_name and type(col.type) not in ignore_sql_types]
                 if not cols:
                     cols = [key]
-                prefix_chunk = audit_prefix_sql % (table.name[:15], counter, table.name)
-                insert_chunk = ''.join(audit_insert_sql % (table.name, pk_name, pk_name, col.name, col.name) for col in cols)
-                update_chunk = ''.join(audit_update_sql % (col.name, table.name, pk_name, pk_name, col.name, col.name, col.name) for col in cols)
-                delete_chunk = audit_delete_sql % (table.name, pk_name, pk_name)
-                trig_sql = ''.join([prefix_chunk, insert_chunk, audit_if_updating, update_chunk, delete_chunk])
-                # print trig_sql
+                trig_sql = audit_trigger_template.render(table_name=table.name, columns=table.columns, pk_name=pk_name)
+                # print(trig_sql)
                 print("creating trigger for table %s" % table.name)
-                con.execute(trig_sql)
+                if not dry_run:
+                    con.execute(trig_sql)
             else:
                 print('-- skipping table with no primary keys: %s' % table.name)
 
 
 def remove_audit_triggers(eng):
     with eng.connect() as con:
-        triggers = con.execute("select trigger_name from all_triggers where trigger_name like 'AUDIT_TRIG_%'")
+        triggers = con.execute("select name from sys.triggers where name like 'AUDIT_TRIG_%' order by name")
         trig_list = list(triggers)
-        print('triggers', trig_list, 'size', len(trig_list))
         for t in trig_list:
             print("dropping trigger %s" % t[0])
             con.execute('drop trigger %s' % t[0])
@@ -152,4 +161,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
